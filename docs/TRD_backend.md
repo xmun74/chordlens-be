@@ -1,17 +1,17 @@
-# CodeLens — Backend Technical Requirements Document (TRD)
+# ChordLens — Backend Technical Requirements Document (TRD)
 
 ---
 
 ## 문서 정보
 
-| 항목       | 내용                          |
-| ---------- | ----------------------------- |
-| 문서 번호  | TRD-BE-001                    |
-| 프로젝트명 | CodeLens                      |
-| 작성일     | 2026-04-13                    |
-| 상태       | 확정                          |
-| 레포 위치  | `codelens-backend` (멀티레포) |
-| 연관 문서  | TRD_frontend.md, PRD.md       |
+| 항목       | 내용                           |
+| ---------- | ------------------------------ |
+| 문서 번호  | TRD-BE-001                     |
+| 프로젝트명 | ChordLens                      |
+| 작성일     | 2026-04-13                     |
+| 상태       | 확정                           |
+| 레포 위치  | `chordlens-backend` (멀티레포) |
+| 연관 문서  | TRD_frontend.md, PRD.md        |
 
 ---
 
@@ -85,7 +85,7 @@ Supabase 캐시 조회 (video_url 기준)
       │ 캐시 히트 → 즉시 반환 (cached: true)
       │ 캐시 미스
       ▼
-yt-dlp: YouTube → MP3 추출 (/tmp/codelens/ 임시 저장)
+yt-dlp: YouTube → MP3 추출 (/tmp/chordlens/ 임시 저장)
       │ 실패 → 500 반환
       ▼
 ffmpeg: MP3 → WAV 변환 (autochord 입력 형식)
@@ -232,7 +232,7 @@ main 브랜치 푸시 (backend/** 변경)
 EC2 SSH 접속
   └── git pull
   └── pip install -r requirements.txt
-  └── systemctl restart codelens
+  └── systemctl restart chordlens
 ```
 
 ---
@@ -279,7 +279,7 @@ EC2 SSH 접속
 
 | 작업                     | 설명                                                               |
 | ------------------------ | ------------------------------------------------------------------ |
-| 프로젝트 초기 세팅       | `codelens-backend` 레포 생성, Python 가상환경, 디렉토리 구조 구성  |
+| 프로젝트 초기 세팅       | `chordlens-backend` 레포 생성, Python 가상환경, 디렉토리 구조 구성 |
 | 의존성 설치              | yt-dlp, autochord, FastAPI, uvicorn, supabase-py, ffmpeg 설치 확인 |
 | yt-dlp 오디오 추출 구현  | YouTube URL → MP3 추출, 임시 파일 저장/삭제                        |
 | autochord 코드 인식 구현 | MP3 → WAV 변환 → 코드명 리스트 반환, 정규화 로직                   |

@@ -20,7 +20,7 @@ venv/
 env/
 
 # Temp audio files
-/tmp/codelens/
+/tmp/chordlens/
 
 # IDE
 .vscode/

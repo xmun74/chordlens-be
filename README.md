@@ -1,23 +1,23 @@
-# CodeLens Backend
+# ChordLens Backend
 
 YouTube URL을 입력하면 기타 코드를 자동으로 분석해 반환하는 FastAPI 백엔드 서버.
 
 ## 기술 스택
 
-| 항목 | 기술 |
-|---|---|
-| 언어 | Python 3.11 |
-| 웹 프레임워크 | FastAPI 0.111 |
-| ASGI 서버 | uvicorn 0.29 |
-| 오디오 추출 | yt-dlp |
-| 코드 인식 | autochord 0.1.3 + NNLS-Chroma VAMP |
-| DB | Supabase (PostgreSQL) |
-| 배포 | AWS EC2 t2.micro |
+| 항목          | 기술                               |
+| ------------- | ---------------------------------- |
+| 언어          | Python 3.11                        |
+| 웹 프레임워크 | FastAPI 0.111                      |
+| ASGI 서버     | uvicorn 0.29                       |
+| 오디오 추출   | yt-dlp                             |
+| 코드 인식     | autochord 0.1.3 + NNLS-Chroma VAMP |
+| DB            | Supabase (PostgreSQL)              |
+| 배포          | AWS EC2 t2.micro                   |
 
 ## 프로젝트 구조
 
 ```
-codelens-be/
+chordlens-be/
 ├── app/
 │   ├── main.py              # FastAPI 앱 진입점, CORS, lifespan
 │   ├── db.py                # Supabase AsyncClient 싱글턴
@@ -44,7 +44,7 @@ codelens-be/
 
 ```bash
 git clone <repo-url>
-cd codelens-be
+cd chordlens-be
 
 # ffmpeg 설치 (미설치 시)
 brew install ffmpeg
@@ -118,11 +118,13 @@ make dev
 YouTube URL을 분석해 기타 코드를 반환한다.
 
 **요청**
+
 ```json
 { "youtube_url": "https://www.youtube.com/watch?v=..." }
 ```
 
 **응답**
+
 ```json
 {
   "id": "uuid",
@@ -139,11 +141,11 @@ YouTube URL을 분석해 기타 코드를 반환한다.
 
 **에러 코드**
 
-| 코드 | 사유 |
-|---|---|
-| 400 | 유효하지 않은 URL / 비공개·연령제한 영상 |
-| 500 | 오디오 추출 또는 코드 인식 실패 |
-| 504 | 처리 시간 초과 (60초) |
+| 코드 | 사유                                     |
+| ---- | ---------------------------------------- |
+| 400  | 유효하지 않은 URL / 비공개·연령제한 영상 |
+| 500  | 오디오 추출 또는 코드 인식 실패          |
+| 504  | 처리 시간 초과 (60초)                    |
 
 ### `GET /health`
 
@@ -167,8 +169,8 @@ YouTube URL
 
 ## 환경 변수
 
-| 변수명 | 설명 |
-|---|---|
-| `SUPABASE_URL` | Supabase 프로젝트 URL |
-| `SUPABASE_KEY` | Supabase service_role 키 |
+| 변수명           | 설명                              |
+| ---------------- | --------------------------------- |
+| `SUPABASE_URL`   | Supabase 프로젝트 URL             |
+| `SUPABASE_KEY`   | Supabase service_role 키          |
 | `ALLOWED_ORIGIN` | CORS 허용 도메인 (프론트엔드 URL) |

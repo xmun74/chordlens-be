@@ -1,4 +1,4 @@
--- CodeLens chord_results 테이블
+-- ChordLens chord_results 테이블
 -- Supabase Dashboard > SQL Editor 에서 실행
 
 create table if not exists chord_results (

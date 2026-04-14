@@ -9,12 +9,12 @@ from app.routers import extract
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_supabase(settings.supabase_url, settings.supabase_key)
-    print("CodeLens API 시작")
+    print("ChordLens API 시작")
     yield
-    print("CodeLens API 종료")
+    print("ChordLens API 종료")
 
 
-app = FastAPI(title="CodeLens API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="ChordLens API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

@@ -4,7 +4,7 @@ import subprocess
 import yt_dlp
 
 
-TEMP_DIR = "/tmp/codelens"
+TEMP_DIR = "/tmp/chordlens"
 
 # 비공개/연령제한 영상 판별 키워드
 _UNAVAILABLE_KEYWORDS = (
