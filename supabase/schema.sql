@@ -8,6 +8,7 @@ create table if not exists chord_results (
     channel_name text        not null,
     thumbnail_url text       not null,
     chords       jsonb       not null default '[]'::jsonb,
+    lyrics       jsonb       null,     -- [{ time, text }] 배열, 자막 없으면 null
     created_at   timestamptz not null default now()
 );
 
