@@ -8,6 +8,8 @@ from app.services.chord import recognize_chords
 
 router = APIRouter()
 
+PIPELINE_TIMEOUT = 60  # 초 — TRD §4-1 기준
+
 YOUTUBE_URL_PATTERN = re.compile(
     r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w\-]{11}"
 )
@@ -36,7 +38,12 @@ async def extract_chords(request: ExtractRequest):
         raise HTTPException(status_code=400, detail="유효하지 않은 YouTube URL입니다.")
 
     try:
-        metadata, chords = await asyncio.to_thread(_run_pipeline, request.youtube_url)
+        metadata, chords = await asyncio.wait_for(
+            asyncio.to_thread(_run_pipeline, request.youtube_url),
+            timeout=PIPELINE_TIMEOUT,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="처리 시간이 초과되었습니다.")
     except VideoUnavailableError:
         raise HTTPException(status_code=400, detail="비공개 또는 접근할 수 없는 영상입니다.")
     except Exception as e:
