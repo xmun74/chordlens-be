@@ -2,11 +2,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+from app.db import init_supabase
 from app.routers import extract
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await init_supabase(settings.supabase_url, settings.supabase_key)
     print("CodeLens API 시작")
     yield
     print("CodeLens API 종료")

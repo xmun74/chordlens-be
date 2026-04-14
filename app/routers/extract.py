@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from app.models.chord import ExtractRequest, ExtractResponse
 from app.services.audio import extract_audio, convert_to_wav, cleanup_files, VideoUnavailableError
 from app.services.chord import recognize_chords
+from app.services.cache import cache_get, cache_set
 
 router = APIRouter()
 
@@ -37,6 +38,19 @@ async def extract_chords(request: ExtractRequest):
     if not is_valid_youtube_url(request.youtube_url):
         raise HTTPException(status_code=400, detail="유효하지 않은 YouTube URL입니다.")
 
+    # 캐시 조회
+    cached = await cache_get(request.youtube_url)
+    if cached:
+        return ExtractResponse(
+            id=cached["id"],
+            title=cached["title"],
+            channel_name=cached["channel_name"],
+            thumbnail_url=cached["thumbnail_url"],
+            chords=cached["chords"],
+            cached=True,
+        )
+
+    # 캐시 미스 — 파이프라인 실행
     try:
         metadata, chords = await asyncio.wait_for(
             asyncio.to_thread(_run_pipeline, request.youtube_url),
@@ -49,9 +63,17 @@ async def extract_chords(request: ExtractRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"처리 중 오류가 발생했습니다: {str(e)}")
 
-    # Phase 2에서 Supabase 캐시 저장/조회로 교체 예정
+    # 결과 저장
+    result_id = await cache_set(
+        video_url=request.youtube_url,
+        title=metadata["title"],
+        channel_name=metadata["channel_name"],
+        thumbnail_url=metadata["thumbnail_url"],
+        chords=chords,
+    )
+
     return ExtractResponse(
-        id=uuid.uuid4(),
+        id=result_id,
         title=metadata["title"],
         channel_name=metadata["channel_name"],
         thumbnail_url=metadata["thumbnail_url"],

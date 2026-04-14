@@ -1,0 +1,20 @@
+-- CodeLens chord_results 테이블
+-- Supabase Dashboard > SQL Editor 에서 실행
+
+create table if not exists chord_results (
+    id           uuid primary key default gen_random_uuid(),
+    video_url    text        not null,
+    title        text        not null,
+    channel_name text        not null,
+    thumbnail_url text       not null,
+    chords       jsonb       not null default '[]'::jsonb,
+    created_at   timestamptz not null default now()
+);
+
+-- 캐시 조회 성능 (video_url 기준 조회)
+create index if not exists idx_chord_results_video_url
+    on chord_results (video_url);
+
+-- 최신 1건 조회 성능 (created_at DESC)
+create index if not exists idx_chord_results_created_at
+    on chord_results (created_at desc);
