@@ -7,14 +7,14 @@ from app.models.chord import ChordItem
 # autochord가 지원하는 장조 12 + 단조 12 = 24개 코드
 # Harte 표기 → 응답 표기 매핑
 _CHORD_MAP = {
-    "A:maj": "A",  "A#:maj": "A#", "B:maj": "B",
-    "C:maj": "C",  "C#:maj": "C#", "D:maj": "D",
-    "D#:maj": "D#","E:maj": "E",   "F:maj": "F",
-    "F#:maj": "F#","G:maj": "G",   "G#:maj": "G#",
-    "A:min": "Am", "A#:min": "A#m","B:min": "Bm",
-    "C:min": "Cm", "C#:min": "C#m","D:min": "Dm",
-    "D#:min": "D#m","E:min": "Em", "F:min": "Fm",
-    "F#:min": "F#m","G:min": "Gm", "G#:min": "G#m",
+    "A:maj": "A",   "A#:maj": "A#", "B:maj": "B",
+    "C:maj": "C",   "C#:maj": "C#", "D:maj": "D",
+    "D#:maj": "D#", "E:maj": "E",   "F:maj": "F",
+    "F#:maj": "F#", "G:maj": "G",   "G#:maj": "G#",
+    "A:min": "Am",  "A#:min": "A#m","B:min": "Bm",
+    "C:min": "Cm",  "C#:min": "C#m","D:min": "Dm",
+    "D#:min": "D#m","E:min": "Em",  "F:min": "Fm",
+    "F#:min": "F#m","G:min": "Gm",  "G#:min": "G#m",
 }
 
 
