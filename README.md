@@ -14,6 +14,10 @@ YouTube URL을 입력하면 기타 코드를 자동으로 분석해 반환하는
 | DB            | Supabase (PostgreSQL)              |
 | 배포          | AWS EC2 t3.small + Docker          |
 
+## 아키텍쳐
+
+<img width="1600" height="800" alt="Image" src="https://github.com/user-attachments/assets/c678f233-3cb4-4c2a-9da5-d2bd48184a23" />
+
 ## 프로젝트 구조
 
 ```
