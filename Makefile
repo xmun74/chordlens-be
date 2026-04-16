@@ -1,2 +1,2 @@
 dev:
-	source venv/bin/activate && uvicorn app.main:app --reload
+	docker run --rm -p 8000:8000 --env-file .env chordlens-be

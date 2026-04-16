@@ -12,7 +12,7 @@ YouTube URL을 입력하면 기타 코드를 자동으로 분석해 반환하는
 | 오디오 추출   | yt-dlp                             |
 | 코드 인식     | autochord 0.1.3 + NNLS-Chroma VAMP |
 | DB            | Supabase (PostgreSQL)              |
-| 배포          | AWS EC2 t2.micro                   |
+| 배포          | AWS EC2 t3.small + Docker          |
 
 ## 프로젝트 구조
 
@@ -38,51 +38,19 @@ chordlens-be/
 └── Makefile
 ```
 
-## 퀵 스타트
+## Quick Start
 
-### 1. 저장소 클론 및 의존성 설치
+### 1. 저장소 클론
 
 ```bash
 git clone <repo-url>
 cd chordlens-be
-
-# ffmpeg 설치 (미설치 시)
-brew install ffmpeg
-
-# 가상환경 생성 및 의존성 설치
-python3.11 -m venv venv
-source venv/bin/activate
-pip install numpy
-pip install "tensorflow<2.16"
-pip install -r requirements.txt
 ```
 
-### 2. NNLS-Chroma VAMP 플러그인 설치 (macOS)
-
-autochord 코드 인식에 필요한 macOS 네이티브 플러그인을 빌드·설치한다.
+### 2. Docker 이미지 빌드
 
 ```bash
-brew install vamp-plugin-sdk boost
-
-git clone https://github.com/c4dm/nnls-chroma.git /tmp/nnls-chroma
-cd /tmp/nnls-chroma
-
-VAMP_SDK=/opt/homebrew/Cellar/vamp-plugin-sdk/$(brew list --versions vamp-plugin-sdk | awk '{print $2}')/
-
-make -f Makefile.osx \
-  CXXFLAGS="-arch arm64 -O3 -ffast-math -I${VAMP_SDK}include -I/opt/homebrew/include -Wall -fPIC"
-
-c++ -o nnls-chroma.dylib \
-  chromamethods.o NNLSBase.o NNLSChroma.o Chordino.o Tuning.o plugins.o nnls.o viterbi.o \
-  -arch arm64 -dynamiclib -install_name nnls-chroma.dylib \
-  -L${VAMP_SDK}lib -lvamp-sdk \
-  -exported_symbols_list vamp-plugin.list \
-  -framework Accelerate
-
-mkdir -p ~/Library/Audio/Plug-Ins/Vamp
-cp nnls-chroma.dylib ~/Library/Audio/Plug-Ins/Vamp/
-
-cd -
+docker build -t chordlens-be .
 ```
 
 ### 3. Supabase 테이블 생성
@@ -106,10 +74,9 @@ ALLOWED_ORIGIN=http://localhost:3000
 ### 5. 서버 실행
 
 ```bash
+# Docker 컨테이너로 서버가 실행되며 `http://localhost:8000` 에서 응답.
 make dev
 ```
-
-서버가 `http://localhost:8000` 에서 실행된다.
 
 ## API
 
