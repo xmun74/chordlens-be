@@ -1,0 +1,29 @@
+name: CI-CD-server
+
+  on:
+    push:
+      branches:
+        - main
+
+  jobs:
+    deploy:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Deploy to EC2
+          uses: appleboy/ssh-action@v1
+          with:
+            host: ${{ secrets.EC2_HOST }}
+            username: ubuntu
+            key: ${{ secrets.EC2_SSH_KEY }}
+            script: |
+              cd ~/chordlens-be
+              git pull origin main
+              docker build -t chordlens-be .
+              docker stop chordlens-be || true
+              docker rm chordlens-be || true
+              docker run -d \
+                --name chordlens-be \
+                --restart unless-stopped \
+                -p 8000:8000 \
+                --env-file .env \
+                chordlens-be
