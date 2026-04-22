@@ -37,10 +37,10 @@ def _detect_subtitle_langs(youtube_url: str) -> list[str]:
             info = ydl.extract_info(youtube_url, download=False)
 
         # 수동 자막 우선
-        manual = list((info.get("subtitles") or {}).keys())
-        if manual:
-            print(f"[audio] 수동 자막 언어: {manual}", flush=True)
-            return manual
+        # manual = list((info.get("subtitles") or {}).keys())
+        # if manual:
+        #     print(f"[audio] 수동 자막 언어: {manual}", flush=True)
+        #     return manual
 
         # 자동 자막 - 영상의 원본 언어만 사용 (번역본 제외)
         orig_lang = info.get("language") or ""

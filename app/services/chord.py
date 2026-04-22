@@ -1,26 +1,20 @@
 import os
-import autochord
+import pkg_resources
+import librosa
+import vamp
+import autochord  # noqa: F401 — VAMP 플러그인을 시스템 경로에 복사·초기화
+from scipy.signal import resample
 from typing import List
 from app.models.chord import ChordItem
 
 
-# autochord가 지원하는 장조 12 + 단조 12 = 24개 코드
-# Harte 표기 → 응답 표기 매핑
-_CHORD_MAP = {
-    "A:maj": "A",   "A#:maj": "A#", "B:maj": "B",
-    "C:maj": "C",   "C#:maj": "C#", "D:maj": "D",
-    "D#:maj": "D#", "E:maj": "E",   "F:maj": "F",
-    "F#:maj": "F#", "G:maj": "G",   "G#:maj": "G#",
-    "A:min": "Am",  "A#:min": "A#m","B:min": "Bm",
-    "C:min": "Cm",  "C#:min": "C#m","D:min": "Dm",
-    "D#:min": "D#m","E:min": "Em",  "F:min": "Fm",
-    "F#:min": "F#m","G:min": "Gm",  "G#:min": "G#m",
-}
+_SAMPLE_RATE = 44100
+_VAMP_PLUGIN_KEY = 'nnls-chroma:chordino'
 
-
-def _normalize_chord(chord: str) -> str | None:
-    """Harte 표기 코드명을 응답 표기로 변환한다. 미지원 코드는 None 반환."""
-    return _CHORD_MAP.get(chord)
+# 시작 시 VAMP 상태 출력
+_vamp_lib = pkg_resources.resource_filename('autochord', 'res/nnls-chroma.so')
+for _p in vamp.vampyhost.get_plugin_path():
+    _so = os.path.join(_p, 'nnls-chroma.so')
 
 
 def _seconds_to_time_str(seconds: float) -> str:
@@ -30,45 +24,54 @@ def _seconds_to_time_str(seconds: float) -> str:
 
 
 def recognize_chords(wav_path: str) -> List[ChordItem]:
-    """WAV 파일에서 코드를 인식하고 정규화된 ChordItem 리스트를 반환한다.
+    """WAV 파일에서 Chordino로 코드를 인식하고 ChordItem 리스트를 반환한다.
+
+    autochord(장조·단조 24개)와 달리 Chordino simplechord 출력은
+    7th, maj7, min7 등 확장 코드를 포함한다.
 
     처리 규칙:
     - 무음(N) 제거
-    - 24개 코드 외 미지원 코드 제거
-    - 인접 중복 병합 (무음 구간 사이 동일 코드는 재등록)
+    - 인접 중복 병합
 
     Raises:
         FileNotFoundError: WAV 파일이 존재하지 않는 경우
-        RuntimeError: autochord 인식 실패
+        RuntimeError: 코드 인식 실패
     """
     if not os.path.exists(wav_path):
         raise FileNotFoundError(f"WAV 파일을 찾을 수 없습니다: {wav_path}")
 
     try:
-        raw_chords = autochord.recognize(wav_path)
+        samples, fs = librosa.load(wav_path, sr=None, mono=True)
+        if fs != _SAMPLE_RATE:
+            samples = resample(samples, num=int(len(samples) * _SAMPLE_RATE / fs))
+
+        output = vamp.collect(samples, _SAMPLE_RATE, _VAMP_PLUGIN_KEY)
     except Exception as e:
         raise RuntimeError(f"코드 인식 실패: {e}") from e
 
     items: List[ChordItem] = []
     prev_chord = None
+    seen_times: set[str] = set()
 
-    for start, _end, chord in raw_chords:
-        # 무음 → 이전 코드 초기화 (무음 이후 동일 코드 재등록 허용)
-        if chord == "N" or not chord:
+    for event in output.get('list', []):
+        chord = str(event.get('label', '')).strip()
+        timestamp = float(event['timestamp'])
+
+        if not chord or chord == 'N':
             prev_chord = None
             continue
 
-        normalized = _normalize_chord(chord)
-
-        # 지원 범위(장조·단조 24개) 밖의 코드 무시
-        if normalized is None:
+        if chord == prev_chord:
             continue
 
-        # 인접 중복 병합
-        if normalized == prev_chord:
+        time_str = _seconds_to_time_str(timestamp)
+
+        # 같은 초에 이미 코드가 있으면 건너뜀 (타임라인 겹침 방지)
+        if time_str in seen_times:
             continue
 
-        items.append(ChordItem(time=_seconds_to_time_str(start), chord=normalized))
-        prev_chord = normalized
+        seen_times.add(time_str)
+        items.append(ChordItem(time=time_str, chord=chord))
+        prev_chord = chord
 
     return items
