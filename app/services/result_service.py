@@ -38,6 +38,42 @@ async def list_results(limit: int = 20, offset: int = 0) -> ResultListResponse:
     return ResultListResponse(items=items, total=total)
 
 
+async def increment_view(id: str) -> None:
+    supabase = get_supabase()
+    try:
+        await supabase.rpc("increment_view_count", {"result_id": id}).execute()
+    except Exception:
+        pass  # fire-and-forget, 실패해도 무시
+
+
+async def get_popular_results(limit: int = 10) -> ResultListResponse:
+    supabase = get_supabase()
+    try:
+        response = await (
+            supabase.table("chord_results")
+            .select("id, video_url, title, channel_name, thumbnail_url, created_at")
+            .gt("view_count", 0)
+            .order("view_count", desc=True)
+            .limit(limit)
+            .execute()
+        )
+    except Exception:
+        raise HTTPException(status_code=500, detail="failed to fetch popular results")
+
+    items = [
+        ResultListItem(
+            id=str(row["id"]),
+            video_url=row["video_url"],
+            title=row.get("title"),
+            channel_name=row.get("channel_name"),
+            thumbnail_url=row.get("thumbnail_url"),
+            created_at=row["created_at"],
+        )
+        for row in (response.data or [])
+    ]
+    return ResultListResponse(items=items, total=len(items))
+
+
 async def get_result(id: str) -> ResultDetail:
     supabase = get_supabase()
     try:
