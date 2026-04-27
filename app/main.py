@@ -3,8 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db import init_supabase
-from app.routers import extract
-
+from app.routers import extract, results
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,6 +24,7 @@ app.add_middleware(
 )
 
 app.include_router(extract.router)
+app.include_router(results.router)
 
 
 @app.get("/health")
