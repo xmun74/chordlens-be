@@ -10,6 +10,8 @@ class ExtractRequest(BaseModel):
 class ChordItem(BaseModel):
     time: str
     chord: str
+    fret: int
+    voicing: str  # "open" | "barre"
 
 
 class LyricLine(BaseModel):
