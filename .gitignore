@@ -33,3 +33,6 @@ env/
 Thumbs.db
 
 .claude/settings.*.json
+
+# Git worktrees
+.worktrees/
