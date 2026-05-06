@@ -10,8 +10,8 @@ class ExtractRequest(BaseModel):
 class ChordItem(BaseModel):
     time: str
     chord: str
-    fret: int
-    voicing: Literal["open", "barre"]
+    fret: int = 0                  # 구 캐시 데이터 호환 — 기본값 open position
+    voicing: Literal["open", "barre"] = "open"  # 구 캐시 데이터 호환
 
 
 class LyricLine(BaseModel):
