@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     supabase_url: str
     supabase_key: str
     allowed_origin: str = "http://localhost:3000"
+    youtube_cookies_path: str = ""
 
 
 settings = Settings()

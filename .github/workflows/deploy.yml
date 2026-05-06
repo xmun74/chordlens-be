@@ -26,4 +26,5 @@ jobs:
               --restart unless-stopped \
               -p 8000:8000 \
               --env-file .env \
+              -v /home/ubuntu/youtube-cookies.txt:/app/youtube-cookies.txt:ro \
               chordlens-be

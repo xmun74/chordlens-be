@@ -1,6 +1,7 @@
 import os
 import glob
 import yt_dlp
+from app.core.config import settings
 
 
 TEMP_DIR = "/tmp/chordlens"
@@ -31,6 +32,8 @@ def _detect_subtitle_langs(youtube_url: str) -> list[str]:
     번역 자막(예: 일본어 영상의 ko 자동번역)은 포함하지 않는다.
     """
     opts = {"skip_download": True, "quiet": True, "no_warnings": True}
+    if settings.youtube_cookies_path and os.path.exists(settings.youtube_cookies_path):
+        opts["cookiefile"] = settings.youtube_cookies_path
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(youtube_url, download=False)
@@ -94,6 +97,8 @@ def extract_audio(youtube_url: str) -> tuple[str, dict]:
         "quiet": True,
         "no_warnings": True,
     }
+    if settings.youtube_cookies_path and os.path.exists(settings.youtube_cookies_path):
+        ydl_opts["cookiefile"] = settings.youtube_cookies_path
 
     if subtitle_langs:
         ydl_opts.update({
