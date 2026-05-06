@@ -2,7 +2,7 @@ import re
 import asyncio
 from fastapi import APIRouter, HTTPException
 from app.models.chord import ExtractRequest, ExtractResponse, LyricLine
-from app.services.audio import extract_audio, convert_to_wav, cleanup_files, VideoUnavailableError
+from app.services.audio import extract_audio, cleanup_files, VideoUnavailableError
 from app.services.chord import recognize_chords
 from app.services.lyrics import extract_lyrics
 from app.services.cache import cache_get, cache_set
@@ -28,11 +28,9 @@ def _parse_video_id(url: str) -> str:
 def _run_pipeline(youtube_url: str) -> tuple:
     """블로킹 파이프라인을 동기 함수로 묶어 스레드 풀에서 실행한다."""
     mp3_path = None
-    wav_path = None
     try:
         mp3_path, metadata = extract_audio(youtube_url)
-        wav_path = convert_to_wav(mp3_path)
-        chords = recognize_chords(wav_path)
+        chords = recognize_chords(mp3_path)
 
         video_id = _parse_video_id(youtube_url)
         raw_lyrics = extract_lyrics(video_id)
@@ -40,7 +38,7 @@ def _run_pipeline(youtube_url: str) -> tuple:
 
         return metadata, chords, lyrics
     finally:
-        cleanup_files(mp3_path, wav_path)
+        cleanup_files(mp3_path)
 
 
 @router.post("/extract", response_model=ExtractResponse)

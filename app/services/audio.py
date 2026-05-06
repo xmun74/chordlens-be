@@ -1,6 +1,5 @@
 import os
 import glob
-import subprocess
 import yt_dlp
 
 
@@ -132,18 +131,6 @@ def extract_audio(youtube_url: str) -> tuple[str, dict]:
     }
 
     return mp3_path, metadata
-
-
-def convert_to_wav(mp3_path: str) -> str:
-    """MP3를 autochord 입력용 WAV(22050Hz, mono)로 변환한다."""
-    wav_path = mp3_path.replace(".mp3", ".wav")
-    result = subprocess.run(
-        ["ffmpeg", "-i", mp3_path, "-ar", "22050", "-ac", "1", wav_path, "-y"],
-        capture_output=True,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"ffmpeg 변환 실패: {result.stderr.decode()}")
-    return wav_path
 
 
 def cleanup_files(*paths: str):
