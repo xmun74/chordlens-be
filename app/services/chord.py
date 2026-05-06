@@ -50,9 +50,12 @@ def _chroma_to_chord(chroma: np.ndarray) -> str | None:
 
 
 def _detect_voicing(midi_pitches: list) -> tuple:
+    if not midi_pitches:
+        return 'open', 0
     if any(p in _OPEN_STRING_PITCHES for p in midi_pitches):
         return 'open', 0
     lowest = min(midi_pitches)
+    # 기타 최저 개방현(E2=MIDI 40) 기준 반음 수로 fret 근사. 보이싱에 따라 오차 발생
     fret = max(1, lowest - 40)
     return 'barre', min(fret, 12)
 

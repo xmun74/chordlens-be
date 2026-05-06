@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Literal, Optional
 import uuid
 
 
@@ -11,7 +11,7 @@ class ChordItem(BaseModel):
     time: str
     chord: str
     fret: int
-    voicing: str  # "open" | "barre"
+    voicing: Literal["open", "barre"]
 
 
 class LyricLine(BaseModel):
