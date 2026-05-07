@@ -1,6 +1,6 @@
 fastapi==0.111.0
 uvicorn==0.29.0
-yt-dlp
+yt-dlp[default]
 basic-pitch>=0.3.0
 supabase>=2.4
 pydantic-settings>=2.2
