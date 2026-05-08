@@ -1,89 +1,61 @@
+"""YouTube 오디오/자막 추출 서비스.
+
+yt-dlp 호출은 1회만 수행하며(자막은 인라인으로 함께 받음), DownloadError 는 모두
+`YtDlpClassifiedError` 로 래핑해 라우터로 전파한다.
+"""
 import os
 import glob
 import yt_dlp
-from app.core.config import settings
 
+from app.core.config import settings
+from app.core.logging import get_logger
+from app.services.yt_dlp_errors import (
+    YtDlpClassifiedError,
+    YtDlpErrorClass,
+    classify,
+)
+
+logger = get_logger(__name__)
 
 TEMP_DIR = "/tmp/chordlens"
 
-# 비공개/연령제한 영상 판별 키워드
-_UNAVAILABLE_KEYWORDS = (
-    "private video",
-    "video unavailable",
-    "this video is unavailable",
-    "sign in to confirm your age",
-    "age-restricted",
-)
+# 자막 화이트리스트 — yt-dlp 는 존재하지 않는 언어를 무시하므로 안전.
+# 화이트리스트 외 언어 영상은 자막 없이 진행된다 (트레이드오프, TRD §11 참조).
+_SUBTITLE_LANGS = ["en", "ko", "ja", "es"]
 
 
+# ── 하위 호환 alias ─────────────────────────────────────
+# 기존 코드(라우터/테스트)가 import 하던 `VideoUnavailableError` 를 유지한다.
+# 새 코드는 `YtDlpClassifiedError` 를 직접 catch 하는 것을 권장.
 class VideoUnavailableError(Exception):
-    """비공개·연령제한·삭제된 영상에 대한 예외"""
+    """비공개·연령제한·삭제된 영상에 대한 예외 (deprecated alias).
+
+    내부적으로 `YtDlpClassifiedError(VIDEO_UNAVAILABLE)` 로 통일되었으며,
+    하위 호환을 위해 클래스 자체는 유지한다. 라우터에서는 `YtDlpClassifiedError` 를
+    `error_class == VIDEO_UNAVAILABLE` 로 분기하라.
+    """
 
 
-def _ensure_temp_dir():
+def _ensure_temp_dir() -> None:
     os.makedirs(TEMP_DIR, exist_ok=True)
 
 
-def _detect_subtitle_langs(youtube_url: str) -> list[str]:
-    """영상의 원본 자막 언어를 감지한다.
-
-    수동 자막이 있으면 그 언어들을 반환하고,
-    없으면 영상의 원본 언어(automatic_captions 기준)를 반환한다.
-    번역 자막(예: 일본어 영상의 ko 자동번역)은 포함하지 않는다.
-    """
-    opts = {"skip_download": True, "quiet": True, "no_warnings": True}
-    if settings.youtube_cookies_path and os.path.exists(settings.youtube_cookies_path):
-        opts["cookiefile"] = settings.youtube_cookies_path
-    try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(youtube_url, download=False)
-
-        # 수동 자막 우선
-        # manual = list((info.get("subtitles") or {}).keys())
-        # if manual:
-        #     print(f"[audio] 수동 자막 언어: {manual}", flush=True)
-        #     return manual
-
-        # 자동 자막 - 영상의 원본 언어만 사용 (번역본 제외)
-        orig_lang = info.get("language") or ""
-        auto_langs = list((info.get("automatic_captions") or {}).keys())
-        print(f"[audio] 원본 언어: {orig_lang!r}, 자동 자막 목록: {auto_langs}", flush=True)
-
-        if orig_lang and orig_lang in auto_langs:
-            return [orig_lang]
-
-        # language 필드가 없을 때: 번역 자막 코드를 제외하고 첫 번째 선택
-        # YouTube 번역 자막은 일반적으로 2~5자 언어 코드 + "-" 없이 나오므로
-        # 영상 제목/설명 언어와 교차 검증하기 어렵다 → 첫 번째 자동 자막 사용
-        if auto_langs:
-            # en이 있으면 우선, 없으면 첫 번째
-            return ["en"] if "en" in auto_langs else [auto_langs[0]]
-
-    except Exception as e:
-        print(f"[audio] 자막 언어 감지 실패 (무시): {e}", flush=True)
-
-    return ["en"]  # 감지 실패 시 영어 기본값
-
-
 def extract_audio(youtube_url: str) -> tuple[str, dict]:
-    """YouTube URL에서 MP3와 자막(VTT)을 함께 추출하고 영상 메타데이터를 반환한다.
+    """YouTube URL에서 MP3와 자막(VTT)을 함께 추출하고 메타데이터를 반환한다.
 
-    자막은 원본 언어로만 다운로드한다 (번역 자막 제외).
+    yt-dlp 는 단 한 번만 호출된다 — 자막 화이트리스트(`_SUBTITLE_LANGS`)에 해당하는
+    자막이 있으면 함께 다운로드되며, lyrics.py 가 그 vtt 파일을 파싱한다.
 
     Returns:
-        (mp3_path, metadata) 튜플
-        자막은 {TEMP_DIR}/{video_id}.{lang}.vtt 로 저장되며 lyrics.py에서 읽어간다.
+        (mp3_path, metadata) 튜플.
 
     Raises:
-        VideoUnavailableError: 비공개·연령제한·삭제된 영상
-        RuntimeError: 그 외 다운로드 실패
+        YtDlpClassifiedError: yt-dlp 가 분류 가능한 에러로 실패한 경우.
+        RuntimeError: MP3 후처리 실패 등 그 외 오류.
     """
     _ensure_temp_dir()
 
-    # 원본 자막 언어 감지 (429 방지를 위해 가벼운 info-only 호출)
-    subtitle_langs = _detect_subtitle_langs(youtube_url)
-
-    ydl_opts = {
+    ydl_opts: dict = {
         "format": "bestaudio/best",
         "outtmpl": f"{TEMP_DIR}/%(id)s.%(ext)s",
         "postprocessors": [
@@ -96,34 +68,46 @@ def extract_audio(youtube_url: str) -> tuple[str, dict]:
         "ignoreerrors": True,
         "quiet": True,
         "no_warnings": True,
+        # 자막 인라인 다운로드 — 별도 yt-dlp 호출을 제거.
+        "writesubtitles": True,
+        "writeautomaticsub": True,
+        "subtitleslangs": _SUBTITLE_LANGS,
+        "subtitlesformat": "vtt",
+        # 소켓 타임아웃 — yt-dlp 가 hang 되는 것을 방지.
+        "socket_timeout": settings.yt_dlp_timeout_seconds,
     }
     if settings.youtube_cookies_path and os.path.exists(settings.youtube_cookies_path):
         ydl_opts["cookiefile"] = settings.youtube_cookies_path
-
-    if subtitle_langs:
-        ydl_opts.update({
-            "writesubtitles": True,
-            "writeautomaticsub": True,
-            "subtitleslangs": subtitle_langs,
-            "subtitlesformat": "vtt",
-        })
 
     info = None
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
     except yt_dlp.utils.DownloadError as e:
-        msg = str(e).lower()
-        if any(keyword in msg for keyword in _UNAVAILABLE_KEYWORDS):
-            raise VideoUnavailableError(str(e)) from e
-        raise RuntimeError(str(e)) from e
+        msg = str(e)
+        error_class = classify(msg)
+        logger.warning(
+            "stage=audio_extract result=download_error error_class=%s msg=%s",
+            error_class.value,
+            msg,
+        )
+        raise YtDlpClassifiedError(error_class, msg) from e
 
     if not info:
-        raise VideoUnavailableError("비공개 또는 접근할 수 없는 영상입니다.")
+        # ignoreerrors=True 일 때 yt-dlp 가 None 을 반환하는 경로 — 영상 접근 불가로 간주.
+        logger.warning("stage=audio_extract result=no_info url=%s", youtube_url)
+        raise YtDlpClassifiedError(
+            YtDlpErrorClass.VIDEO_UNAVAILABLE,
+            "비공개 또는 접근할 수 없는 영상입니다.",
+        )
 
     video_id = info["id"]
     all_files = glob.glob(f"{TEMP_DIR}/{video_id}*")
-    print(f"[audio] 다운로드 후 파일 목록: {all_files}", flush=True)
+    logger.info(
+        "stage=audio_extract result=ok video_id=%s files=%d",
+        video_id,
+        len(all_files),
+    )
 
     mp3_path = f"{TEMP_DIR}/{video_id}.mp3"
     if not os.path.exists(mp3_path):
@@ -138,7 +122,7 @@ def extract_audio(youtube_url: str) -> tuple[str, dict]:
     return mp3_path, metadata
 
 
-def cleanup_files(*paths: str):
+def cleanup_files(*paths: str) -> None:
     """임시 파일을 삭제한다. 성공·실패 무관하게 항상 호출한다."""
     for path in paths:
         try:
