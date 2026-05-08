@@ -15,12 +15,13 @@ from app.services.yt_dlp_errors import (
 @pytest.mark.parametrize(
     "msg,expected",
     [
-        # YOUTUBE_BOT_CHECK
+        # YOUTUBE_BOT_CHECK — yt-dlp가 U+2019 곡선 아포스트로피를 사용하므로
+        # 아포스트로피 없는 "not a bot" 키워드로 매칭한다.
         (
-            "ERROR: Sign in to confirm you're not a bot. This helps protect our community.",
+            "ERROR: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.",
             YtDlpErrorClass.YOUTUBE_BOT_CHECK,
         ),
-        ("confirm you're not a bot", YtDlpErrorClass.YOUTUBE_BOT_CHECK),
+        ("Sign in to confirm you’re not a bot", YtDlpErrorClass.YOUTUBE_BOT_CHECK),
         # RATE_LIMIT
         ("ERROR: HTTP Error 429: Too Many Requests", YtDlpErrorClass.RATE_LIMIT),
         ("Too Many Requests from this IP", YtDlpErrorClass.RATE_LIMIT),
@@ -53,7 +54,7 @@ def test_classify_empty_message():
 def test_classify_case_insensitive():
     """대소문자 무시 매칭."""
     assert classify("PRIVATE VIDEO") == YtDlpErrorClass.VIDEO_UNAVAILABLE
-    assert classify("Sign In To Confirm You're Not A Bot") == YtDlpErrorClass.YOUTUBE_BOT_CHECK
+    assert classify("You are Not A Bot check failed") == YtDlpErrorClass.YOUTUBE_BOT_CHECK
     assert classify("HTTP error 429") == YtDlpErrorClass.RATE_LIMIT
 
 

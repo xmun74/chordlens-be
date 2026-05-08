@@ -27,9 +27,10 @@ NON_RETRYABLE: frozenset[YtDlpErrorClass] = frozenset(
 
 # 메시지 키워드 → 클래스 매핑 (소문자 부분일치).
 # 우선순위: BOT_CHECK > RATE_LIMIT > VIDEO_UNAVAILABLE > AUTH_REQUIRED > NETWORK_TIMEOUT
+# NOTE: "you're"의 아포스트로피는 yt-dlp가 U+2019(곡선)을 사용하므로
+#       아포스트로피를 포함하지 않는 키워드로 매칭한다.
 _KEYWORD_MAP: list[tuple[str, YtDlpErrorClass]] = [
-    ("sign in to confirm you're not a bot", YtDlpErrorClass.YOUTUBE_BOT_CHECK),
-    ("confirm you're not a bot", YtDlpErrorClass.YOUTUBE_BOT_CHECK),
+    ("not a bot", YtDlpErrorClass.YOUTUBE_BOT_CHECK),
     ("http error 429", YtDlpErrorClass.RATE_LIMIT),
     ("too many requests", YtDlpErrorClass.RATE_LIMIT),
     ("private video", YtDlpErrorClass.VIDEO_UNAVAILABLE),
