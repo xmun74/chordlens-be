@@ -65,7 +65,6 @@ def extract_audio(youtube_url: str) -> tuple[str, dict]:
                 "preferredquality": "192",
             }
         ],
-        "ignoreerrors": True,
         "quiet": True,
         "no_warnings": True,
         # 자막 인라인 다운로드 — 별도 yt-dlp 호출을 제거.
