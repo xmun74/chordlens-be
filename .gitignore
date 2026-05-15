@@ -36,3 +36,8 @@ Thumbs.db
 
 # Git worktrees
 .worktrees/
+.claude/worktrees/
+
+_workspace/
+_workspace_prev_*/
+

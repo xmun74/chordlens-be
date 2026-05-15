@@ -48,11 +48,12 @@ def _parse_video_id(url: str) -> str:
 def _run_pipeline(youtube_url: str) -> tuple:
     """블로킹 파이프라인을 동기 함수로 묶어 스레드 풀에서 실행한다."""
     mp3_path = None
+    video_id = _parse_video_id(youtube_url)
+    clean_url = f"https://www.youtube.com/watch?v={video_id}"
     try:
-        mp3_path, metadata = extract_audio(youtube_url)
+        mp3_path, metadata = extract_audio(clean_url)
         chords = recognize_chords(mp3_path)
 
-        video_id = _parse_video_id(youtube_url)
         raw_lyrics = extract_lyrics(video_id)
         lyrics = [LyricLine(**l) for l in raw_lyrics] if raw_lyrics else None
 
