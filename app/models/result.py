@@ -11,6 +11,7 @@ class ResultListItem(BaseModel):
     channel_name: str | None
     thumbnail_url: str | None
     created_at: datetime
+    duration: int | None = None
 
 
 class ResultListResponse(BaseModel):

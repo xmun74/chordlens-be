@@ -11,7 +11,7 @@ async def get_results(limit: int = 20, offset: int = 0) -> ResultListResponse:
 
 
 @router.get("/results/popular", response_model=ResultListResponse)
-async def get_popular(limit: int = 10) -> ResultListResponse:
+async def get_popular(limit: int = 20) -> ResultListResponse:
     return await get_popular_results(limit=limit)
 
 

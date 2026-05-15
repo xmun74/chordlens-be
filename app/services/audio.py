@@ -116,6 +116,7 @@ def extract_audio(youtube_url: str) -> tuple[str, dict]:
         "title": info.get("title", ""),
         "channel_name": info.get("uploader", ""),
         "thumbnail_url": info.get("thumbnail", ""),
+        "duration": info.get("duration"),
     }
 
     return mp3_path, metadata
