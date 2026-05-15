@@ -8,6 +8,7 @@ import re
 
 from fastapi import APIRouter, HTTPException
 
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.chord import ExtractRequest, ExtractResponse, LyricLine
 from app.services.audio import cleanup_files, extract_audio
@@ -29,7 +30,6 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 PIPELINE_TIMEOUT = 60  # 초 — TRD §4-1 기준
-_RETRY_BACKOFF_SEC = 1.0
 
 YOUTUBE_URL_PATTERN = re.compile(
     r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w\-]{11}"
@@ -149,29 +149,36 @@ async def extract_chords(request: ExtractRequest):
     except YtDlpClassifiedError as e:
         if e.error_class in NON_RETRYABLE:
             raise _map_classified(e)
-        # retryable — 1회만 in-process 재시도 (지수 백오프 1s).
-        logger.info(
-            "stage=extract_retry video_id=%s error_class=%s",
-            video_id,
-            e.error_class.value,
-        )
-        await asyncio.sleep(_RETRY_BACKOFF_SEC)
-        try:
-            metadata, chords, lyrics = await run_guarded(video_id, _do_pipeline)
-        except YtDlpClassifiedError as e2:
-            if e2.error_class in NON_RETRYABLE:
-                raise _map_classified(e2)
-            raise _http_error(500, "INTERNAL_ERROR", e2.original)
-        except CircuitOpenError:
-            raise _http_error(
-                503,
-                "CIRCUIT_OPEN",
-                "서버 단 보호가 활성화되어 있습니다. 잠시 후 다시 시도해주세요.",
+        retry_count = max(settings.ytdlp_retry_count, 0)
+        last_error = e
+        for attempt in range(1, retry_count + 1):
+            logger.info(
+                "stage=extract_retry video_id=%s error_class=%s attempt=%s retry_count=%s",
+                video_id,
+                last_error.error_class.value,
+                attempt,
+                retry_count,
             )
-        except asyncio.TimeoutError:
-            raise _http_error(504, "PIPELINE_TIMEOUT", "처리 시간이 초과되었습니다.")
-        except Exception as e2:
-            raise _http_error(500, "INTERNAL_ERROR", f"처리 중 오류가 발생했습니다: {e2}")
+            await asyncio.sleep(settings.ytdlp_backoff_seconds)
+            try:
+                metadata, chords, lyrics = await run_guarded(video_id, _do_pipeline)
+                break
+            except YtDlpClassifiedError as e2:
+                if e2.error_class in NON_RETRYABLE:
+                    raise _map_classified(e2)
+                last_error = e2
+            except CircuitOpenError:
+                raise _http_error(
+                    503,
+                    "CIRCUIT_OPEN",
+                    "서버 단 보호가 활성화되어 있습니다. 잠시 후 다시 시도해주세요.",
+                )
+            except asyncio.TimeoutError:
+                raise _http_error(504, "PIPELINE_TIMEOUT", "처리 시간이 초과되었습니다.")
+            except Exception as e2:
+                raise _http_error(500, "INTERNAL_ERROR", f"처리 중 오류가 발생했습니다: {e2}")
+        else:
+            raise _http_error(500, "INTERNAL_ERROR", last_error.original)
     except CircuitOpenError:
         raise _http_error(
             503,

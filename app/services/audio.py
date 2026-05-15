@@ -24,6 +24,25 @@ TEMP_DIR = "/tmp/chordlens"
 _SUBTITLE_LANGS = ["en", "ko", "ja", "es"]
 
 
+class _YtDlpLogCapture:
+    """yt-dlp가 ignoreerrors=True로 삼킨 에러 메시지를 분류용으로 보관한다."""
+
+    def __init__(self) -> None:
+        self.messages: list[str] = []
+
+    def debug(self, msg: str) -> None:
+        pass
+
+    def warning(self, msg: str) -> None:
+        self.messages.append(str(msg))
+
+    def error(self, msg: str) -> None:
+        self.messages.append(str(msg))
+
+    def text(self) -> str:
+        return "\n".join(self.messages)
+
+
 # ── 하위 호환 alias ─────────────────────────────────────
 # 기존 코드(라우터/테스트)가 import 하던 `VideoUnavailableError` 를 유지한다.
 # 새 코드는 `YtDlpClassifiedError` 를 직접 catch 하는 것을 권장.
@@ -54,6 +73,7 @@ def extract_audio(youtube_url: str) -> tuple[str, dict]:
         RuntimeError: MP3 후처리 실패 등 그 외 오류.
     """
     _ensure_temp_dir()
+    ytdlp_log_capture = _YtDlpLogCapture()
 
     ydl_opts: dict = {
         "format": "bestaudio/best",
@@ -77,12 +97,26 @@ def extract_audio(youtube_url: str) -> tuple[str, dict]:
         "ignoreerrors": True,
         # 소켓 타임아웃 — yt-dlp 가 hang 되는 것을 방지.
         "socket_timeout": settings.yt_dlp_timeout_seconds,
+        "logger": ytdlp_log_capture,
     }
-    if settings.youtube_cookies_path and os.path.exists(settings.youtube_cookies_path):
+    if settings.ytdlp_proxy_url:
+        ydl_opts["proxy"] = settings.ytdlp_proxy_url
+
+    if settings.ytdlp_use_cookies and settings.youtube_cookies_path and os.path.exists(
+        settings.youtube_cookies_path
+    ):
         ydl_opts["cookiefile"] = settings.youtube_cookies_path
+    else:
+        ydl_opts["nocookies"] = True
 
     info = None
     try:
+        logger.info(
+            "stage=audio_extract result=start proxy_enabled=%s proxy_country=%s cookies_enabled=%s",
+            bool(settings.ytdlp_proxy_url),
+            settings.ytdlp_proxy_country or "",
+            bool(ydl_opts.get("cookiefile")),
+        )
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
     except yt_dlp.utils.DownloadError as e:
@@ -97,7 +131,15 @@ def extract_audio(youtube_url: str) -> tuple[str, dict]:
 
     if not info:
         # ignoreerrors=True 일 때 yt-dlp 가 None 을 반환하는 경로 — 영상 접근 불가로 간주.
-        logger.warning("stage=audio_extract result=no_info url=%s", youtube_url)
+        logged_error = ytdlp_log_capture.text()
+        error_class = classify(logged_error)
+        logger.warning(
+            "stage=audio_extract result=no_info error_class=%s url=%s",
+            error_class.value,
+            youtube_url,
+        )
+        if error_class != YtDlpErrorClass.UNKNOWN:
+            raise YtDlpClassifiedError(error_class, logged_error)
         raise YtDlpClassifiedError(
             YtDlpErrorClass.VIDEO_UNAVAILABLE,
             "비공개 또는 접근할 수 없는 영상입니다.",

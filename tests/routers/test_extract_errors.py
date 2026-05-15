@@ -139,12 +139,38 @@ def test_network_timeout_retries_once_then_fails_500(client):
         raise exc
 
     with patch("app.routers.extract.run_guarded", side_effect=fake_run_guarded), \
-         patch("app.routers.extract._RETRY_BACKOFF_SEC", 0):
+         patch("app.routers.extract.settings.ytdlp_backoff_seconds", 0):
         res = client.post("/extract", json={"youtube_url": VALID_URL})
 
     assert res.status_code == 500
     assert res.headers.get("X-Error-Code") == "INTERNAL_ERROR"
     assert call_count["n"] == 2  # 1차 + retry 1
+
+
+def test_retryable_error_uses_configured_retry_count_and_backoff(client, monkeypatch):
+    """retryable 에러는 설정된 횟수와 backoff 값을 사용한다."""
+    call_count = {"n": 0}
+    sleeps = []
+    exc = YtDlpClassifiedError(YtDlpErrorClass.NETWORK_TIMEOUT, "read timed out")
+
+    async def fake_run_guarded(video_id, fn):
+        call_count["n"] += 1
+        raise exc
+
+    async def fake_sleep(seconds):
+        sleeps.append(seconds)
+
+    monkeypatch.setattr("app.routers.extract.settings.ytdlp_retry_count", 2)
+    monkeypatch.setattr("app.routers.extract.settings.ytdlp_backoff_seconds", 0.25)
+
+    with patch("app.routers.extract.run_guarded", side_effect=fake_run_guarded), \
+         patch("app.routers.extract.asyncio.sleep", side_effect=fake_sleep):
+        res = client.post("/extract", json={"youtube_url": VALID_URL})
+
+    assert res.status_code == 500
+    assert res.headers.get("X-Error-Code") == "INTERNAL_ERROR"
+    assert call_count["n"] == 3  # 1차 + retry 2
+    assert sleeps == [0.25, 0.25]
 
 
 def test_network_timeout_retry_succeeds_returns_200(client):
@@ -162,7 +188,7 @@ def test_network_timeout_retry_succeeds_returns_200(client):
         )
 
     with patch("app.routers.extract.run_guarded", side_effect=fake_run_guarded), \
-         patch("app.routers.extract._RETRY_BACKOFF_SEC", 0):
+         patch("app.routers.extract.settings.ytdlp_backoff_seconds", 0):
         res = client.post("/extract", json={"youtube_url": VALID_URL})
 
     assert res.status_code == 200
