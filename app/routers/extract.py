@@ -193,6 +193,7 @@ async def extract_chords(request: ExtractRequest):
         thumbnail_url=metadata["thumbnail_url"],
         chords=chords,
         lyrics=lyrics,
+        duration=metadata.get("duration"),
     )
 
     return ExtractResponse(

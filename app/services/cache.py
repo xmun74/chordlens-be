@@ -38,6 +38,7 @@ async def cache_set(
     thumbnail_url: str,
     chords: list[ChordItem],
     lyrics: list[LyricLine] | None,
+    duration: int | None = None,
 ) -> str:
     """분석 결과를 Supabase에 저장하고 생성된 UUID를 반환한다."""
     client = get_supabase()
@@ -51,6 +52,7 @@ async def cache_set(
                 "thumbnail_url": thumbnail_url,
                 "chords": [c.model_dump() for c in chords],
                 "lyrics": [l.model_dump() for l in lyrics] if lyrics else None,
+                "duration": duration,
             }
         )
         .execute()

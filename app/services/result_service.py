@@ -15,7 +15,7 @@ async def list_results(limit: int = 20, offset: int = 0) -> ResultListResponse:
     try:
         response = await (
             supabase.table("chord_results")
-            .select("id, video_url, title, channel_name, thumbnail_url, created_at", count="exact")
+            .select("id, video_url, title, channel_name, thumbnail_url, created_at, duration", count="exact")
             .order("created_at", desc=True)
             .range(offset, offset + limit - 1)
             .execute()
@@ -31,6 +31,7 @@ async def list_results(limit: int = 20, offset: int = 0) -> ResultListResponse:
             channel_name=row.get("channel_name"),
             thumbnail_url=row.get("thumbnail_url"),
             created_at=row["created_at"],
+            duration=row.get("duration"),
         )
         for row in (response.data or [])
     ]
@@ -46,12 +47,12 @@ async def increment_view(id: str) -> None:
         pass  # fire-and-forget, 실패해도 무시
 
 
-async def get_popular_results(limit: int = 10) -> ResultListResponse:
+async def get_popular_results(limit: int = 20) -> ResultListResponse:
     supabase = get_supabase()
     try:
         response = await (
             supabase.table("chord_results")
-            .select("id, video_url, title, channel_name, thumbnail_url, created_at")
+            .select("id, video_url, title, channel_name, thumbnail_url, created_at, duration")
             .gt("view_count", 0)
             .order("view_count", desc=True)
             .limit(limit)
@@ -68,6 +69,7 @@ async def get_popular_results(limit: int = 10) -> ResultListResponse:
             channel_name=row.get("channel_name"),
             thumbnail_url=row.get("thumbnail_url"),
             created_at=row["created_at"],
+            duration=row.get("duration"),
         )
         for row in (response.data or [])
     ]

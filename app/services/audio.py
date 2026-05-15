@@ -72,6 +72,9 @@ def extract_audio(youtube_url: str) -> tuple[str, dict]:
         "writeautomaticsub": True,
         "subtitleslangs": _SUBTITLE_LANGS,
         "subtitlesformat": "vtt",
+        # 자막 429 등 비치명적 에러 시 오디오 추출 계속 진행.
+        # 오디오 자체 실패 시 info=None 반환 → 아래 체크에서 처리.
+        "ignoreerrors": True,
         # 소켓 타임아웃 — yt-dlp 가 hang 되는 것을 방지.
         "socket_timeout": settings.yt_dlp_timeout_seconds,
     }
@@ -116,6 +119,7 @@ def extract_audio(youtube_url: str) -> tuple[str, dict]:
         "title": info.get("title", ""),
         "channel_name": info.get("uploader", ""),
         "thumbnail_url": info.get("thumbnail", ""),
+        "duration": info.get("duration"),
     }
 
     return mp3_path, metadata

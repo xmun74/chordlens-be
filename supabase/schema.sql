@@ -33,3 +33,7 @@ create or replace function increment_view_count(result_id uuid)
 returns void as $$
   update chord_results set view_count = view_count + 1 where id = result_id;
 $$ language sql;
+
+-- 영상 재생시간 컬럼 추가
+alter table chord_results
+    add column if not exists duration integer null;
