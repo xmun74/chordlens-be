@@ -24,12 +24,17 @@ jobs:
       - name: Install system deps
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libsndfile1
 
-      # prod(Dockerfile)와 동일한 설치 순서: vamp(setup.py)가 numpy를 빌드 타임에 요구.
-      # requirements.txt를 그대로 설치하므로 의존성/버전 오류 검출
+      # prod(Dockerfile)와 동일한 설치 순서. vamp(chord-extractor 의존)의 setup.py가 빌드
+      # 타임에 numpy를 import 하는데, PEP517 빌드 격리 환경엔 numpy가 없어 실패한다.
+      # → numpy(+setuptools/wheel) 선설치 후 vamp만 --no-build-isolation 으로 빌드.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "numpy>=1.24"
+          # setuptools<81: chord-extractor 런타임이 pkg_resources를 import (81+는 제거됨).
+          # wheel: vamp를 --no-build-isolation 으로 빌드할 때 필요.
+          pip install "setuptools<81" wheel
+          pip install "numpy<2"
+          pip install --no-build-isolation vamp==1.1.0
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
 
