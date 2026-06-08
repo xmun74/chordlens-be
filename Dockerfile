@@ -4,6 +4,7 @@ FROM python:3.11-slim
 # ── 시스템 패키지 ─────────────────────────────────────────
 # ffmpeg: yt-dlp 오디오 추출용
 # curl/unzip/ca-certificates: Deno 설치용
+# libsndfile1: chord-extractor(Chordino/vamp) 오디오 디코딩 런타임 의존
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     gcc \
@@ -11,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     unzip \
     ca-certificates \
+    libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Deno 설치 ────────────────────────────────────────────
@@ -23,7 +25,11 @@ RUN curl -fsSL https://deno.land/install.sh | sh -s -- -y \
 WORKDIR /app
 
 # ── 의존성 설치 ───────────────────────────────────────────
+# chord-extractor의 의존 vamp가 setup.py에서 numpy를 import → numpy 선설치 필요.
+# chord-extractor는 linux 64-bit용 Chordino 바이너리를 동봉하므로 별도 VAMP_PATH 설정
+# 불필요(linux/amd64 빌드 전제). 비표준 아키텍처면 VAMP_PATH 지정 필요.
 COPY requirements.txt .
+RUN pip install --no-cache-dir "numpy>=1.24"
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ── 소스 코드 복사 ────────────────────────────────────────

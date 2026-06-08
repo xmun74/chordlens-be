@@ -1,7 +1,8 @@
 fastapi==0.111.0
 uvicorn==0.29.0
 yt-dlp[default]
-basic-pitch>=0.3.0
+numpy>=1.24            # chord-extractor(vamp)가 설치 시점에 numpy 요구
+chord-extractor==0.1.3 # Chordino(NNLS-Chroma) Vamp 플러그인 래퍼, linux64 바이너리 동봉 (PyPI 최신, py3.11 호환)
 supabase>=2.4
 pydantic-settings>=2.2
 python-multipart

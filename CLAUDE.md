@@ -8,3 +8,4 @@
 | 날짜 | 변경 내용 | 대상 | 사유 |
 |------|----------|------|------|
 | 2026-05-07 | 초기 구성 | 전체 | BE 프로젝트 하네스 신규 구축 |
+| 2026-06-04 | 코드 인식 엔진 basic-pitch→Chordino 교체 | app/services/chord.py, voicing.py | 풀 믹스 화성 인식 정확도 개선, fret/voicing은 chords-db(MIT) 룩업 |
